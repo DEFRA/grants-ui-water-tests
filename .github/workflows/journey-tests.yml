@@ -210,16 +210,16 @@ jobs:
           fi
 
           if [[ -z "$FILTER" ]]; then
-          docker compose -p lis-dev -f compose.yml up "${BUILD[@]}" --abort-on-container-exit
+          docker compose -p grants-ui -f compose.yml up "${BUILD[@]}" --abort-on-container-exit
           else
-          docker compose -p lis-dev -f compose.yml run --rm "${BUILD[@]}" journey-tests \
+          docker compose -p grants-ui -f compose.yml run --rm "${BUILD[@]}" journey-tests \
               sh -c "npm ci && npx playwright test --grep='$FILTER'"
           fi
 
-      - name: Debug Inspect lis-dev network
+      - name: Debug Inspect grants-ui-net network
         if: always()
         shell: bash
-        run: docker network inspect lis-dev_default || true
+        run: docker network inspect grants-ui-net || true
 
       - name: Upload Allure results
         if: always()
