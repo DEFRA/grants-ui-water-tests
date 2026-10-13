@@ -1,0 +1,30 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": ".",
+    "outDir": "dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "types": ["node", "playwright"],
+    "lib": ["ES2022"],
+
+    // Recommended Options
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "scripts": {
+    "build:tests": "tsc && npx bddgen",
+    "test": "npm run build:tests && npx playwright test --config=playwright.config.ts --test-dir=dist/tests"
+  },
+  "include": ["playwright.config.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

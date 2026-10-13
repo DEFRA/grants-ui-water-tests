@@ -1,15 +1,280 @@
 name: Run Journey Tests on GitHub
 
 permissions:
+  id-token: write
+  contents: write
   checks: write
   pull-requests: write
 
 on:
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Choose test suite'
+        type: choice
+        required: false
+        default: ''
+        options:
+          - ''
+          - 'api'
+          - 'ui'
+      tag:
+        description: 'Choose test group'
+        type: choice
+        required: false
+        default: ''
+        options:
+          - ''
+          - 'smoke'
+          - 'e2e'
+      branch-set:
+        description: 'Which branch to test (branch names must match across all repos)'
+        type: string
+        required: false
+        default: main
+      grants-ui-ref:
+        description: 'Which grants-ui branch or commit to run the platform from'
+        type: string
+        required: false
+        default: main
+      grants-scoring-api-ref:
+        description: 'Which grants-scoring-api branch or commit to run the platform from'
+        type: string
+        required: false
+        default: main
+
   workflow_call:
+    inputs:
+      test:
+        required: false
+        type: string
+        default: ''
+      tag:
+        required: false
+        type: string
+        default: ''
+      branch-set:
+        required: false
+        type: string
+        default: ${{ github.ref_name }}
+      grants-ui-ref:
+        required: false
+        type: string
+        default: main
+      grants-scoring-api-ref:
+        required: false
+        type: string
+        default: main
+      image-version:
+        description: 'Published grants-ui-water-tests image to run; builds from source when empty'
+        required: false
+        type: string
+        default: ''
+
 jobs:
-  build:
+  journey-tests:
     name: Run Journey Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: DEFRA/cdp-node-journey-test-suite-template/run-journey-tests@main
+      - name: Checkout grants-ui
+        uses: actions/checkout@v7
+        with:
+          repository: DEFRA/grants-ui
+          ref: ${{ inputs.grants-ui-ref }}
+          path: grants-ui
+
+      - name: Checkout grants-scoring-api
+        uses: actions/checkout@v7
+        with:
+          repository: DEFRA/grants-scoring-api
+          ref: ${{ inputs.grants-scoring-api-ref }}
+          path: grants-scoring-api
+
+      - name: Checkout grants-ui-water-tests
+        uses: actions/checkout@v7
+        with:
+          repository: DEFRA/grants-ui-water-tests
+          ref: ${{ inputs.branch-set }}
+          path: grants-ui-water-tests
+
+      - name: Fix permissions for grants-ui and grants-ui-water-tests scripts
+        shell: bash
+        run: |
+          chmod -R +x grants-ui/**/*.sh
+          chmod -R +x grants-ui-water-tests/**/*.sh
+
+      # FIX: Set ROOT_DIR so floci init scripts mount correctly
+      - name: Set ROOT_DIR for compose mounts
+        shell: bash
+        run: echo "ROOT_DIR=${{ github.workspace }}" >> $GITHUB_ENV
+
+      - name: Start development platform (grants-ui and grants-scoring-api) and wait for it to be ready
+        working-directory: grants-ui-water-tests/bin
+        shell: bash
+        run: |
+          chmod +x platform.sh
+          ./platform.sh up
+
+      - name: Archive npm failure logs
+        uses: actions/upload-artifact@v7
+        if: failure() # Only runs if the step above fails
+        with:
+            name: npm-logs
+            path: ~/.npm/_logs/
+
+      - name: Wait for platform to stabilise
+        shell: bash
+        run: sleep 15
+
+      - name: List running containers
+        shell: bash
+        run: docker ps -a
+
+      - name: Debug grants-ui logs
+        shell: bash
+        run: docker logs grants-ui-grants-ui-1 || true
+
+      - name: Debug grants-ui health endpoint
+        shell: bash
+        run: curl -v http://localhost:3000/health
+
+      - name: Debug grants-scoring-api logs
+        shell: bash
+        run: docker logs grants-ui-grants-scoring-api-1 || true
+
+      - name: Debug grants-scoring-api health endpoint
+        shell: bash
+        run: curl -v https://localhost:5001/health
+
+      - name: Configure AWS credentials
+        if: inputs.image-version != ''
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: eu-west-2
+          role-to-assume: arn:aws:iam::094954420758:role/github-grants-ui-water-tests-build-role
+
+      - name: Log in to Amazon ECR
+        if: inputs.image-version != ''
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Pull the published journey-tests image
+        if: inputs.image-version != ''
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/grants-ui-water-tests:${{ inputs.image-version }}
+        run: |
+          docker pull "$IMAGE"
+          echo "JOURNEY_TESTS_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Ensure report directories exist
+        shell: bash
+        run: |
+          mkdir -p grants-ui-water-tests/allure-report
+          mkdir -p grants-ui-water-tests/playwright-report
+
+      - name: Run journey-tests inside Docker
+        working-directory: grants-ui-water-tests
+        shell: bash
+        env:
+          TEST_INPUT: ${{ inputs.test }}
+          TAG_INPUT: ${{ inputs.tag }}
+        run: |
+          FILTER=""
+
+          if [[ -n "$TEST_INPUT" ]]; then
+          FILTER="$TEST_INPUT"
+          fi
+
+          if [[ -n "$TAG_INPUT" ]]; then
+          if [[ -n "$FILTER" ]]; then
+              FILTER="$FILTER|$TAG_INPUT"
+          else
+              FILTER="$TAG_INPUT"
+          fi
+          fi
+
+          echo "Running tests with filter: $FILTER"
+
+          # Run the published image when one was pulled, otherwise build it.
+          BUILD=()
+          if [[ -z "${JOURNEY_TESTS_IMAGE:-}" ]]; then
+          BUILD=(--build)
+          fi
+
+          if [[ -z "$FILTER" ]]; then
+          docker compose -p lis-dev -f compose.yml up "${BUILD[@]}" --abort-on-container-exit
+          else
+          docker compose -p lis-dev -f compose.yml run --rm "${BUILD[@]}" journey-tests \
+              sh -c "npm ci && npx playwright test --grep='$FILTER'"
+          fi
+
+      - name: Debug Inspect lis-dev network
+        if: always()
+        shell: bash
+        run: docker network inspect lis-dev_default || true
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results
+          path: grants-ui-water-tests/allure-results
+          if-no-files-found: ignore
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: grants-ui-water-tests/playwright-report/html
+          if-no-files-found: ignore
+
+      - name: Collect Docker logs
+        if: always()
+        shell: bash
+        run: |
+          echo "Docker container logs" > logs.txt
+          echo "=====================" >> logs.txt
+          docker ps -a >> logs.txt
+
+          for c in $(docker ps -a --format "{{.Names}}"); do
+          echo "=====================" >> logs.txt
+          echo "CONTAINER: $c" >> logs.txt
+          echo "=====================" >> logs.txt
+          docker logs $c >> logs.txt 2>&1 || true
+          done
+
+      - name: Upload docker logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-logs
+          path: logs.txt
+
+      - name: Publish Test Report with Insights
+        uses: ctrf-io/github-test-reporter@v1.1.0
+        with:
+          fail-rate-report: true
+          flaky-rate-report: true
+          github-report: true
+          insights-report: true
+          pull-request-report: true
+          report-path: grants-ui-water-tests/playwright-report/*.json
+          slowest-report: true
+          summary-delta-report: true
+          upload-artifact: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: always()
+
+      # Stop platform (UI + backend)
+      - name: Stop platform
+        if: always()
+        working-directory: grants-ui-water-tests/bin
+        shell: bash
+        run: ./platform.sh down
+
+      # Slack reporting is covered by CDP notification integration and is setup for DEV, Test and Ext-Test environments
