@@ -33,8 +33,7 @@ export const test = base.extend<{
   // eslint-disable-next-line no-empty-pattern
   grantsUiBackendClient: async ({}, use) => {
     const apiContext = await request.newContext({
-      baseURL:
-        process.env.GRANTS_UI_BACKEND_BASE_URL || 'http://localhost:3001'
+      baseURL: process.env.GRANTS_UI_BACKEND_BASE_URL || 'http://localhost:3001'
     })
     const grantsUiBackendClient = new GrantsUiBackendClient(
       apiContext,
