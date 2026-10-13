@@ -104,6 +104,11 @@ jobs:
           chmod -R +x grants-ui/**/*.sh
           chmod -R +x grants-ui-water-tests/**/*.sh
 
+      - name: Create empty .env file for grants-scoring-api
+        shell: bash
+        run: |
+          touch grants-scoring-api/.env
+
       # FIX: Set ROOT_DIR so floci init scripts mount correctly
       - name: Set ROOT_DIR for compose mounts
         shell: bash
