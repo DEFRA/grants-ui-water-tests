@@ -59,6 +59,7 @@ start_platform() {
 
     cd "$GRANTS_UI_DIR"
     configure_nvm
+    npm i
     start_grants_ui
 
     cd "$GRANTS_SCORING_API_DIR"
