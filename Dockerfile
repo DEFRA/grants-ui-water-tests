@@ -1,4 +1,4 @@
-FROM node:24.14.1-slim
+FROM node:25.9.0-slim
 
 ENV TZ="Europe/London"
 
@@ -17,7 +17,12 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 WORKDIR /app
 
 COPY . .
-RUN npm install
+
+RUN rm -rf allure-report allure-results playwright-report test-results
+RUN chmod +x entrypoint.sh
+RUN chmod +x ./bin/publish-tests.sh
+RUN npm install \
+    && npx playwright install --with-deps
 
 ENTRYPOINT [ "./entrypoint.sh" ]
 

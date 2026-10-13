@@ -1,56 +1,96 @@
 name: Run Journey Tests on GitHub
+description: 'Run journet tests for grants-ui and grants water projects'
 
 inputs:
-  example-node-backend:
+  test:
+    description: 'Choose Test suite'
+    type: choice
     required: false
-    type: string
-  example-node-frontend:
+    default: ''
+    options:
+      - '@api'
+      - '@ui'
+  tag:
+    description: 'Choose test group'
+    type: choice
     required: false
-    type: string
+    default: ''
+    options:
+      - '@smoke'
+      - '@e2e'
+  slack-webhook-url:
+    required: false
 
 runs:
   using: "composite"
   steps:
+    # Checkout the journey-tests repo
     - uses: actions/checkout@v4
       with:
-        repository: DEFRA/cdp-node-journey-test-suite-template
+        repository: DEFRA/grants-ui-water-tests
+        path: grants-ui-water-tests
 
-    - name: Docker Login
-      uses: DEFRA/cdp-build-action/docker-login@main
-
+    # Setup Node
     - uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version-file: grants-ui-water-tests/.nvmrc
         cache: npm
-    - name: Setup the tests
-      run: npm i
+
+   # Install dependencies
+    - name: Install dependencies
+      working-directory: grants-ui-water-tests
+      run: npm ci
       shell: bash
-    - name: Start docker compose
+
+    # Install Playwright browsers
+    - name: Install Playwright browsers
+      working-directory: grants-ui-water-tests
+      run: npx playwright install --with-deps
+      shell: bash
+
+    # Debug environment variables injected by CDP
+    - name: Show environment variables
       shell: bash
       run: |
-          CDP_EXAMPLE_NODE_FRONTEND=${{inputs.example-node-frontend}} \
-          CDP_EXAMPLE_NODE_BACKEND=${{inputs.example-node-backend}} \
-          docker compose up --wait-timeout 300 -d --quiet-pull
-    - name: Run the tests
+        echo "GRANTS-UI-URL:  $GRANTS_UI_BASE_URL"
+        echo "GRANTS-UI-BACKEND: $GRANTS_UI_BACKEND_BASE_URL"
+        echo "GRANTS-SCORING-API": $GRANTS_SCORING_API_BASE_URL"
+
+    # Run Playwright tests
+    - name: Run Grants UI Water Tests
+      working-directory: grants-ui-water-tests
       shell: bash
+      env:
+        ENVIRONMENT: dev   # CDP Portal will override this with dev/test/perf-test
       run: |
-        npm run test:github
-        npm run report
-    - name: debug
-      if: always()
-      run: |
-        docker compose logs > logs.txt
-        docker ps
-      shell: bash
-    - name: Upload allure report
+        FILTER=""
+        if [[ -n "${{ inputs.test }}" ]]; then FILTER="${{ inputs.test }}"; fi
+        if [[ -n "${{ inputs.tag }}" ]]; then
+          if [[ -n "$FILTER" ]]; then FILTER="$FILTER|${{ inputs.tag }}"; else FILTER="${{ inputs.tag }}"; fi
+        fi
+
+        echo "Running tests with filter: $FILTER"
+
+        if [[ -z "$FILTER" ]]; then
+          npx playwright test --config=playwright.config.ts
+        else
+          npx playwright test --config=playwright.config.ts --grep="$FILTER"
+        fi
+
+    # Upload Allure report
+    - name: Upload Allure report
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: allure-report
-        path: ./allure-report
-    - name: Upload docker compose logs
+        path: grants-ui-water-tests/allure-report
+
+    # Upload Playwright HTML report
+    - name: Upload Playwright HTML report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: docker-compose-logs
-        path: ./logs.txt
+        name: playwright-report
+        path: grants-ui-water-tests/playwright-report/html
+
+    # Slack reporting is covered by CDP notification integration and is setup for DEV, Test and Ext-Test environments
