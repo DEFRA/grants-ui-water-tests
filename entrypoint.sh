@@ -19,8 +19,9 @@ echo "CI:                       ${CI:-<not set>}"
 echo "CDP:                      ${CDP:-<not set>}"
 echo ""
 
-echo "LIS_FRONTOFFICE_BASE_URL:         ${LIS_FRONTOFFICE_BASE_URL:-<not set>}"
-echo "LIS_BACKOFFICE_BASE_URL:          ${LIS_BACKOFFICE_BASE_URL:-<not set>}"
+echo "GRANTS_UI_BASE_URL:         ${GRANTS_UI_BASE_URL:-<not set>}"
+echo "GRANTS_UI_BACKEND_BASE_URL:          ${GRANTS_UI_BACKEND_BASE_URL:-<not set>}"
+echo "GRANTS_SCORING_API_BASE_URL:          ${GRANTS_SCORING_API_BASE_URL:-<not set>}"
 echo ""
 
 echo "GITHUB_ACTIONS:           ${GITHUB_ACTIONS:-<not set>}"

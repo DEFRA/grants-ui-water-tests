@@ -34,7 +34,7 @@ export const test = base.extend<{
   grantsUiBackendClient: async ({}, use) => {
     const apiContext = await request.newContext({
       baseURL:
-        process.env.GRANTS_UI_BACKEND_API_BASE_URL || 'http://localhost:3001'
+        process.env.GRANTS_UI_BACKEND_BASE_URL || 'http://localhost:3001'
     })
     const grantsUiBackendClient = new GrantsUiBackendClient(
       apiContext,
