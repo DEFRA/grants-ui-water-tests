@@ -18,13 +18,6 @@ GRANTS_UI_PARENT_DIR="$ROOT_DIR"
 
 COMMAND="${1:-help}"
 
-ensure_network() {
-	if ! docker network inspect grants-ui-net >/dev/null 2>&1; then
-		echo "[platform] Creating grants-ui-net network..."
-		docker network create grants-ui-net
-	fi
-}
-
 configure_nvm() {
     source ~/.nvm/nvm.sh
     nvm install && nvm use
@@ -83,7 +76,6 @@ stop_platform() {
 
 case "$COMMAND" in
 up)
-    ensure_network
     start_platform
     ;;
 down)
