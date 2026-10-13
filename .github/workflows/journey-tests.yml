@@ -150,7 +150,7 @@ jobs:
 
       - name: Debug grants-scoring-api health endpoint
         shell: bash
-        run: curl -v https://localhost:5001/health
+        run: curl -v http://localhost:5001/health
 
       - name: Configure AWS credentials
         if: inputs.image-version != ''
