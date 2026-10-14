@@ -1,4 +1,4 @@
-FROM node:25.9.0-slim
+FROM mcr.microsoft.com/playwright:v1.59.1-noble
 
 ENV TZ="Europe/London"
 
@@ -8,22 +8,20 @@ RUN apt-get update -qq \
     && apt-get install -qqy \
     curl \
     zip \
-    openjdk-17-jre-headless
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
-    && ./aws/install
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws/
 
 WORKDIR /app
 
+COPY package*.json ./
+RUN npm ci
+RUN npx playwright install --with-deps msedge
 COPY . .
-
-RUN rm -rf allure-report allure-results playwright-report test-results
-RUN chmod +x entrypoint.sh
-RUN chmod +x ./bin/publish-tests.sh
-RUN npm install \
-    && npx playwright install --with-deps
-
 ENTRYPOINT [ "./entrypoint.sh" ]
 
-# This is downloading the linux amd64 aws cli. For M1 macs build and run with the --platform=linux/amd64 argument. eg docker build . --platform=linux/amd64
+# This image downloads the linux amd64 AWS CLI. For M1 Macs build and run with the --platform=linux/amd64 argument.
