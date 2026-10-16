@@ -1,342 +1,73 @@
-grants-ui-water-tests
+# grants-ui-water-tests
 
-A Playwright-based end-to-end and API test suite for the Grants UI Water services.  
-Tests can be executed locally, in CI (GitHub Actions), or on the CDP Platform using the published Docker image.
+Runner for the Water Management grant journey tests on the CDP Portal.
 
-- [Local Development](#local-development)
-  - [Requirements](#requirements)
-    - [Node.js](#nodejs)
-    - [Prerequisites](#Prerequisites)
-  - [Setup](#setup)
-  - [Running tests](#running-tests)
-  - [Environment Configuration](#environment-configuration)
-  - [Debugging tests](#debugging-tests)
-- [Project Structure](#project-structure)
-- [Production](#production)
-- [Licence](#licence)
+The tests themselves live in [grants-config-water-management](https://github.com/DEFRA/grants-config-water-management) under `test/grants-ui`, alongside the journey config they exercise. This repo holds no specs: on every run it fetches the config repo at its latest release tag into `.water-management-config/` (gitignored) and runs the tests from there. This is the same tag grants-ui's CI uses. Set `WATER_MANAGEMENT_TAG` to pin a release, e.g. `WATER_MANAGEMENT_TAG=1.40.9 npm test`.
 
-## Local Development
+## What This Tests
 
-### Prerequisites
+This test suite provides journey testing coverage for:
 
-- **.NET 10 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/10.0)
-- **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop)
-- **Git** LIS Dev (Front and Back office ochestration) - [Download](https://github.com/DEFRA/lis-dev)
+- Water Management Grant application journeys served by [grants-ui](https://github.com/DEFRA/grants-ui)
 
-#### Node.js
+## Technology Stack
 
-Please install [Node.js](http://nodejs.org/) `>= v22.13.1` and [npm](https://nodejs.org/). You will find it
-easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm).
+- **Playwright** - Browser automation framework
+- **Node.js 24+** - Runtime environment
 
-To use the correct version of Node.js for this application, via nvm:
+## Prerequisites
+
+- Node.js `>=24.15.0 <25.0.0` (check with `node --version`)
+- npm (comes with Node.js)
+
+## Running the Test Suite
+
+The suite runs on the CDP Portal only. To run the journey tests locally, run them from grants-config-water-management.
+
+### CDP Portal — playwright.cdp.config.js
 
 ```bash
-nvm use
+npm test
 ```
 
-### Setup
-
-Install application dependencies:
-
-```bash
-npm install
-```
-
-Install Playwright browsers:
-
-```bash
-npx playwright install
-```
-
-### Running tests
-
-Run all tests (Default ENV=local, HEADLESS=true):
-
-```bash
-npm run test
-```
-
-Run tests for a specific environment:
-
-```bash
-npx playwright test --ENV=local
-npx playwright test --ENV=dev
-```
-
-Run tests in UI mode (interactive):
-
-```bash
-npx playwright test --ui
-```
-
-Run a specific test file:
-
-```bash
-npx playwright test tests/features/api/example.feature
-```
-
-### Environment Configuration
-
-The test environment is configured via the `ENV` environment variable in `playwright.config.ts`:
-
-- `local` (default): Runs against the following services
-  - `https://localhost:3000` (Grants Scoring API)
-  - `https://localhost:4000` (Grants UI)
-  - `https://localhost:4001` (Grants UI Backend)
-- `docker`: Used when running inside the tests Docker container
-- `dev`: Runs against development environment URLs
-
-When `ENV=local`, Playwright will automatically start the the grants scoring api, ui and backend environments before running tests.
-
-### Debugging tests
-
-Run tests in debug mode:
-
-```bash
-npx playwright test --debug
-```
-
-Run tests with Playwright Inspector:
-
-```bash
-npx playwright test --headed
-```
-
-View test reports:
-
-```bash
-npx playwright show-report
-```
+- Runs against the CDP environment specified by the `ENVIRONMENT` env var
+- Base URL pattern: `https://grants-ui.${ENVIRONMENT}.cdp-int.defra.cloud`
+- Triggered via the CDP Portal under Test Suites
+- Publishes an HTML report to S3
+- Runs in Microsoft Edge (Playwright's `msedge` channel). The CDP Portal runner is Linux, so this is the Linux build of Edge rather than true Windows Edge — best endeavours coverage, not a substitute for testing on Windows Edge directly
 
 ## Project Structure
 
 ```
-tests/
-├── features               # API tests
-│   ├── api/               # All API related tests
-│   |── ui/                # All UI related tests
-│   ├── support/           # Test support and setup
-│   └── step-definitions/  # Step definition classes
-├── fixtures/              # Playwright test fixtures
-├── types/                 # TypeScript type definitions
-└── utils/                 # Utility functions and constants
+grants-ui-water-tests/
+├── scripts/fetch-tests.sh      # Fetches the tests from grants-config-water-management
+└── playwright.cdp.config.js    # CDP Portal config
 ```
 
-## Production
+## Writing Tests
 
-### Running the tests
+Tests are written in [grants-config-water-management](https://github.com/DEFRA/grants-config-water-management) under `test/grants-ui/test/specs`. Change them there and cut a config release; this repo picks up the new release on its next run.
 
-Tests are run from the CDP-Portal under the Test Suites section. Before any changes can be run, a new docker image must be built, this will happen automatically when a pull request is merged into the `main` branch.
-You can check the progress of the build under the actions section of this repository. Builds typically take around 1-2 minutes.
+## Test Reports
 
-The results of the test run are made available in the portal.
+The native Playwright HTML report is used. When running on CDP, the report is automatically published to S3 and made available in the portal.
 
-### Test Reports
+## Troubleshooting
 
-Test reports is generated in the following format:
+### Tests Won't Run
 
-- **HTML Report**: `allure-report` - Interactive HTML report
-- **JSON Report**: `allure-results` - Machine-readable test results
-- **Console Output**: Real-time test execution output
+- Ensure you have the correct Node.js version: `node --version` should be `>=24.15.0 <25.0.0`
+- Ensure the service under test is running and accessible at the configured base URL
+- Run `npx playwright install msedge` if the browser is not installed
 
-View the HTML report:
+## Related Repositories
 
-```bash
-npx playwright show-report
-```
+- [grants-config-water-management](https://github.com/DEFRA/grants-config-water-management) - Water Management Grants config and the journey tests themselves
+- [grants-ui](https://github.com/DEFRA/grants-ui) - The main grants application UI service
 
-## Running on the CDP Platform
+## Support
 
-The CDP Platform runs the published Docker image of this test suite.
-
-**How it works**
-
-- A new Docker image is built and published automatically when changes are merged into main.
-- CDP Portal always runs the latest published image.
-- CDP injects environment variables:
-  - PROFILE (optional test filter)
-  - ENVIRONMENT (dev/test/perf-test)
-- The container runs `entrypoint.sh`, which:
-  - executes Playwright Cucumber-js tests
-  - generates `allure-results/`
-  - builds the Allure HTML report (`allure-report/`)
-  - publishes the report via `./bin/publish-tests.sh` to S3.
-- CDP Portal displays the final HTML report
-
-### Requirements for CDP
-
-The Docker image must be published via `.github/workflows/publish.yml`.
-
-`entrypoint.sh` must exit with:
-
-- 0 on success
-- non-zero on failure
-
-`./bin/publish-tests.sh` must upload the Allure HTML report to S3.
-
-### Running the Test Suite via GitHub Workflow
-
-You can also run the test suite directly from GitHub using the composite action in:
-
-```
-Code
-./run-journey-tests/action.yml
-```
-
-This runs Playwright without Docker, using CDP environment variables if provided.
-
-Useful for:
-
-- smoke testing
-- running against dev/test environments
-- debugging failures outside CDP Portal
-
-## Running on GitHub
-
-CI runs the test suite inside Docker using docker compose.
-Reports are mounted out of the container and uploaded as artifacts.
-
-CI uploads:
-
-- allure-results/ (raw Allure data)
-- playwright-report/html/ (Playwright HTML report)
-- ctrf-report (A merged CTRF JSON formatted report for Github Actions)
-- docker-logs (Docker related logs)
-
-CI does not generate the Allure HTML report (allure-report/), because the entrypoint intentionally skips publishing when GITHUB_ACTIONS=true.
-
-## Platform Orchestration (`grants-ui and scoring api docker compose`)
-
-The test suite includes a helper script located at:
-
-`bin/platform.sh`
-
-```
-
-This script provides a consistent way to start and stop the **local/docker LIS platform**, including:
-
-- shared infrastructure (LocalStack, Redis, PostgreSQL, etc.)
-- backend service (`grants-ui-backend, grants-scoring-api`)
-- ui service (`grants-ui`)
-
-It is used in **local development**, **GitHub Actions CI**, and **CDP‑style local simulation**.
-
----
-
-### How `platform.sh` Works
-
-The script:
-
-1. Resolves paths to:
-   - `grants-ui`
-   - `grants-ui-backend`
-   - `grants-scoring-api
-2. Ensures the shared Docker network `grants-ui-net` exists
-3. Starts or stops:
-   - shared infra
-   - grants-ui
-   - grants-ui-backend
-   - grants-scoring-api
-
----
-```
-
-### Commands
-
-Start the grants-ui platform:
-
-```bash
-./bin/platform.sh up
-```
-
-Stop the grants-ui platform:
-
-```bash
-./bin/platform.sh down
-```
-
-`bin/platform.sh` provides a **unified orchestration layer** for local and CI environments:
-
-- Ensures consistent Docker networking
-- Ensures correct override files
-- Starts back-office, front-office, and shared infra
-- Makes local and CI environments match
-- Not used by CDP Portal (which runs the Docker image directly)
-
-This gives you:
-
-- Local parity with CI
-- CI parity with CDP
-- Predictable, reproducible test environments
-
-### How grants-ui Behaves in Each Environment
-
-#### Local Development
-
-When running locally:
-
-The script starts:
-
-- grants-ui
-- grants-ui-backend
-- grants-config-broker
-
-Uses `docker-compose.yml` unless an override is provided.
-
-Ensures the `grants-ui-net` Docker network exists.
-
-Allows you to run tests against a fully local Grants UI and Grants Scoring API Service.
-
-Typical workflow:
-
-```
-./bin/platform.sh up
-npm run test
-./bin/platform.sh down
-```
-
-####GitHub Actions (CI)
-
-In CI:
-
-- CI=true is set automatically
-- The scripts run in exactly the same way as they run locally for parity
-
-This ensures:
-
-- deterministic builds
-- no local-only overrides
-- correct networking
-- correct environment variables
-- reproducible test runs
-
-CI uses the script to start:
-
-- grants-ui
-- grants-ui-backend
-- grants-scoring-api
-
-Then the test suite runs inside Docker.
-
-After the run, CI calls:
-
-```
-./bin/platform.sh down
-```
-
-to clean up.
-
-#### CDP Platform
-
-Important:
-
-The CDP Platform **does NOT** use `./bin/platform.sh`.
-
-CDP Portal runs the **published Docker image** of the test suite directly:
-
-```
-docker run <image>
-```
+For questions or issues with this test suite, please contact the Grants Application Enablement (GAE) team.
 
 ## Licence
 

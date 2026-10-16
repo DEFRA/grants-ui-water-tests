@@ -4,54 +4,26 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'
-      - 'hotfix/**'
-      - 'release/**'
 
 permissions:
   id-token: write
   contents: write
   pull-requests: write
-  checks: write
 
 env:
   AWS_REGION: eu-west-2
-  AWS_ACCOUNT_ID: '094954420758'
+  AWS_ACCOUNT_ID: "094954420758"
 
 jobs:
   build:
     if: github.run_number != 1
     name: Build, version and publish
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Build the test suite
-        uses: DEFRA/cdp-build-action/build-test@main
+      - name: Build and Publish
+        uses: DEFRA/cdp-build-action/build@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # build-test tags this commit with the version it pushed to ECR but
-      # doesn't expose it, so read it back for the journey tests to pull.
-      - name: Read the published version
-        id: version
-        run: |
-          git fetch --quiet --force origin "refs/tags/*:refs/tags/*"
-          version=$(git tag --points-at HEAD --sort=-v:refname | head -n 1)
-
-          if [[ -z "$version" ]]; then
-            echo "No version tag points at $GITHUB_SHA." >&2
-            exit 1
-          fi
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-  journey-tests:
-    needs: build
-    uses: ./.github/workflows/journey-tests.yml
-    with:
-      image-version: ${{ needs.build.outputs.version }}
-    secrets: inherit

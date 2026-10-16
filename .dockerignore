@@ -3,3 +3,6 @@ Dockerfile
 .git
 .github
 .husky
+.water-management-config
+playwright-report
+test-results
