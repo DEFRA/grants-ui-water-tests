@@ -8,7 +8,7 @@ The tests themselves live in [grants-config-water-management](https://github.com
 
 This test suite provides journey testing coverage for:
 
-- Woodland Management Plan grant application journeys served by [grants-ui](https://github.com/DEFRA/grants-ui)
+- Water Management Grant application journeys served by [grants-ui](https://github.com/DEFRA/grants-ui)
 
 ## Technology Stack
 
@@ -22,7 +22,7 @@ This test suite provides journey testing coverage for:
 
 ## Running the Test Suite
 
-The suite runs on the CDP Portal only. To run the journey tests locally, run them from grants-config-woodland.
+The suite runs on the CDP Portal only. To run the journey tests locally, run them from grants-config-water-management.
 
 ### CDP Portal — playwright.cdp.config.js
 
@@ -39,8 +39,8 @@ npm test
 ## Project Structure
 
 ```
-grants-ui-woodland-tests/
-├── scripts/fetch-tests.sh      # Fetches the tests from grants-config-woodland
+grants-ui-water-tests/
+├── scripts/fetch-tests.sh      # Fetches the tests from grants-config-water-management
 └── playwright.cdp.config.js    # CDP Portal config
 ```
 
@@ -62,7 +62,7 @@ The native Playwright HTML report is used. When running on CDP, the report is au
 
 ## Related Repositories
 
-- [grants-config-woodland](https://github.com/DEFRA/grants-config-water-management) - Water Management config and the journey tests themselves
+- [grants-config-water-management](https://github.com/DEFRA/grants-config-water-management) - Water Management Grants config and the journey tests themselves
 - [grants-ui](https://github.com/DEFRA/grants-ui) - The main grants application UI service
 
 ## Support

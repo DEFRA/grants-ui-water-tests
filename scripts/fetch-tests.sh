@@ -3,7 +3,7 @@
 # Fetches the water management journey tests co-located in grants-config-water-management
 # (test/grants-ui), along with the GAS schema they validate against, at the
 # latest config release tag. Mirrors how grants-ui resolves WATER_MANAGEMENT_TAG in
-# tools/docker-compose-smoke-test.sh. Set WATER_TAG to pin a release.
+# tools/docker-compose-smoke-test.sh. Set WATER_MANAGEMENT_TAG to pin a release.
 
 set -e
 
