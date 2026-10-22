@@ -56,7 +56,7 @@ The native Playwright HTML report is used. When running on CDP, the report is au
 
 ### Tests Won't Run
 
-- Ensure you have the correct Node.js version: `node --version` should be `>=24.15.0 <25.0.0`
+- Ensure you have the correct Node.js version: `node --version` should be `>=24.22.1 <25.0.0`
 - Ensure the service under test is running and accessible at the configured base URL
 - Run `npx playwright install msedge` if the browser is not installed
 
