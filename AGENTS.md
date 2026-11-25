@@ -27,7 +27,7 @@ bin/publish-tests.sh          # publishes the HTML report to S3 (CDP only)
 ## Tech Stack
 
 - **Test framework**: Playwright (`@playwright/test`), JavaScript only, no TypeScript
-- **Node version**: 24.15.0 (see `.nvmrc`)
+- **Node version**: 26.11.1 (see `.nvmrc`)
 
 ## Commands
 
