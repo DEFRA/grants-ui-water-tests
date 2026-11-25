@@ -13,11 +13,11 @@ This test suite provides journey testing coverage for:
 ## Technology Stack
 
 - **Playwright** - Browser automation framework
-- **Node.js 24+** - Runtime environment
+- **Node.js 26+** - Runtime environment
 
 ## Prerequisites
 
-- Node.js `>=24.15.0 <25.0.0` (check with `node --version`)
+- Node.js `>=26.13.1` (check with `node --version`)
 - npm (comes with Node.js)
 
 ## Running the Test Suite
